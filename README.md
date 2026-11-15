@@ -1,5 +1,29 @@
 # Junior Astronaut Mission Trainer
 
+## Browser application
+
+The repository also includes a responsive React/Vite web edition. It ports the five-mission campaign, scoring, astronaut profiles, simulated telemetry and health readings, emergency response, EVA, delayed communications, orbital navigation, flight history, and certificate download. The Python desktop edition below remains intact.
+
+Requirements: Node.js 18 or newer (npm is included).
+
+```powershell
+npm install
+npm run dev
+```
+
+Create a production build and preview it locally:
+
+```powershell
+npm run build
+npm run preview
+```
+
+### Deploy to Vercel
+
+Push the repository to GitHub and import it as a new Vercel project. Vercel detects Vite; use `npm run build` for the build command and `dist` for the output directory. The included `vercel.json` supports app-route fallback. No backend, paid service, or secret is required.
+
+The web edition stores profiles, mission results, health readings, and radio messages in browser `localStorage`. Records stay in the current browser and do not sync across devices; the browser app does not read or migrate the desktop SQLite database. All spacecraft and health values are simulated for training, not connected to physical devices, and not medical advice.
+
 A local, software-only astronaut training simulator for students. All spacecraft and health values are simulated; no physical devices or live medical measurements are used. Student records stay in a local SQLite database.
 
 ## Architecture
