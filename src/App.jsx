@@ -22,7 +22,7 @@ export default function App() {
   const [telemetry, setTelemetry] = useState(newTelemetry)
   const [dialog, setDialog] = useState(null)
   const [notice, setNotice] = useState('')
-  const active = state.astronauts.find((person) => person.id === state.activeId) || state.astronauts[0]
+  const active = state.astronauts.find((person) => person.id === state.activeId) || null
 
   useEffect(() => saveState(state), [state])
   useEffect(() => {
@@ -36,6 +36,17 @@ export default function App() {
   }
   function selectAstronaut(id) {
     patchState((current) => ({ ...current, activeId: id }))
+  }
+  function signOut() {
+    selectAstronaut(null)
+    setPage('dashboard')
+    setNotice('You are signed out. Your crew profile and flight record are saved on this device.')
+  }
+  function signIn(id) {
+    const person = state.astronauts.find((astronaut) => astronaut.id === id)
+    selectAstronaut(id)
+    setPage('dashboard')
+    if (person) setNotice(`Welcome back, ${person.name}.`)
   }
   function addTelemetry(values = telemetry) {
     if (!active) return
@@ -100,13 +111,16 @@ export default function App() {
     <main className="main-area">
       <header className="topbar"><div className="breadcrumb"><span>FLIGHT OPERATIONS</span><b>/</b><strong>{navItems.find(([id]) => id === page)?.[1] || 'Orbital Navigation'}</strong></div>
         <div className="topbar-right"><span className="date-stamp">SIMULATION ENVIRONMENT <i /> ALL SYSTEMS NOMINAL</span>
-          {state.astronauts.length > 0 && <select aria-label="Active astronaut" value={active?.id || ''} onChange={(event) => selectAstronaut(event.target.value)}>{state.astronauts.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select>}
+          {active && state.astronauts.length > 1 && <select aria-label="Active astronaut" value={active.id} onChange={(event) => selectAstronaut(event.target.value)}>{state.astronauts.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select>}
+          {active
+            ? <button className="button button-outline" onClick={signOut}>Log out</button>
+            : <button className="button button-cyan" onClick={() => setPage('registration')}>Log in</button>}
         </div>
       </header>
       {notice && <div className="toast" role="status">{notice}<button onClick={() => setNotice('')} aria-label="Dismiss message">×</button></div>}
       <div className="content-area">
         {page === 'dashboard' && <Dashboard active={active} data={dashboard} state={state} onNavigate={setPage} onMission={openMission} />}
-        {page === 'registration' && <Registration state={state} onCreate={(person) => { patchState((current) => ({ ...current, astronauts: [...current.astronauts, person], activeId: person.id })); setPage('dashboard'); setNotice(`${person.name} cleared for training · ${person.id}`) }} onSelect={(id) => { selectAstronaut(id); setPage('dashboard') }} />}
+        {page === 'registration' && <Registration state={state} onCreate={(person) => { patchState((current) => ({ ...current, astronauts: [...current.astronauts, person], activeId: person.id })); setPage('dashboard'); setNotice(`${person.name} cleared for training · ${person.id}`) }} onSelect={signIn} />}
         {page === 'missions' && <MissionManifest active={active} state={state} onMission={openMission} />}
         {page === 'systems' && <Systems telemetry={telemetry} onSample={() => { const updated = advanceTelemetry(telemetry); setTelemetry(updated); addTelemetry(updated) }} onLaunch={() => setDialog({ id: 'launch-checklist', name: 'Launch Readiness' })} />}
         {page === 'health' && <Health state={state} active={active} telemetry={telemetry} onRefresh={() => { const values = newTelemetry(); setTelemetry(values); addTelemetry(values) }} />}
@@ -191,8 +205,8 @@ function Registration({ state, onCreate, onSelect }) {
       <div className="form-row"><label className="field-label">TRAINING LEVEL<select value={form.trainingLevel} onChange={(event) => setForm({ ...form, trainingLevel: event.target.value })}><option>Cadet</option><option>Explorer</option><option>Commander</option></select></label>
         <label className="field-label">INITIAL MISSION<select value={form.missionId} onChange={(event) => setForm({ ...form, missionId: event.target.value })}>{missions.map((mission) => <option key={mission.id} value={mission.id}>{mission.name}</option>)}</select></label></div>
       {error && <div className="form-error" role="alert">{error}</div>}<button className="button button-cyan submit-button">Save astronaut profile <span>↗</span></button>
-    </form><div className="registration-aside"><div className="section-panel intake-panel"><div className="eyebrow">INTAKE PARAMETERS</div><h3>One profile.<br />A whole flight log.</h3><div className="intake-rule" /><p>Progress and mission results are stored locally on this device. No account or network connection is required.</p><div className="intake-stamp">LOCAL<br />RECORD</div></div>
-      {state.astronauts.length > 0 && <div className="section-panel existing-panel"><div className="panel-heading"><div><div className="eyebrow">SAVED CREW</div><h2>Existing profiles</h2></div></div>{state.astronauts.map((person) => <button className="existing-person" key={person.id} onClick={() => onSelect(person.id)}><span className="crew-avatar">{person.name[0]}</span><span><b>{person.name}</b><small>{person.id} · {person.trainingLevel}</small></span><span className="row-arrow">↗</span></button>)}</div>}</div></div>
+    </form><div className="registration-aside"><div className="section-panel intake-panel"><div className="eyebrow">INTAKE PARAMETERS</div><h3>One profile.<br />A whole flight log.</h3><div className="intake-rule" /><p>Sign in to a saved crew profile to continue its training. Profiles and mission results stay on this device.</p><div className="intake-stamp">LOCAL<br />RECORD</div></div>
+      {state.astronauts.length > 0 && <div className="section-panel existing-panel"><div className="panel-heading"><div><div className="eyebrow">SIGN IN / SAVED CREW</div><h2>Choose a profile</h2></div></div>{state.astronauts.map((person) => <button className="existing-person" key={person.id} onClick={() => onSelect(person.id)}><span className="crew-avatar">{person.name[0]}</span><span><b>{person.name}</b><small>{person.id} · {person.trainingLevel}</small></span><span className="row-arrow">↗</span></button>)}</div>}</div></div>
   </>
 }
 
@@ -314,8 +328,47 @@ function Assessment({ state, active, onCertificate }) {
 function downloadCertificate(active, latest) {
   if (!active || !latest) return
   const mission = missions.find((item) => item.id === latest.missionId)
-  const body = `JUNIOR ASTRONAUT MISSION TRAINER\nTRAINING CERTIFICATE\n\nAwarded to: ${active.name}\nAstronaut ID: ${active.id}\n\nMost recent mission: ${mission?.name}\nResult: ${latest.status.toUpperCase()}\nScore: ${latest.score}\nCompletion: ${latest.completion}%\nDate: ${latest.completedAt}\n`
-  const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([body], { type: 'text/plain' })); link.download = `${active.id}-certificate.txt`; link.click(); URL.revokeObjectURL(link.href)
+  const escapeXml = (value) => String(value).replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;',
+  })[character])
+  const issuedOn = new Date(latest.completedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+  const nameFontSize = Math.max(28, Math.min(54, 1100 / (active.name.length * 0.62)))
+  const certificate = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="850" viewBox="0 0 1200 850" role="img" aria-labelledby="title description">
+  <title id="title">Orbital Academy training certificate for ${escapeXml(active.name)}</title>
+  <desc id="description">${escapeXml(latest.status)} result for ${escapeXml(mission?.name || 'Mission training')}, issued ${escapeXml(issuedOn)}.</desc>
+  <rect width="1200" height="850" fill="#102535"/>
+  <rect x="28" y="28" width="1144" height="794" rx="8" fill="#f8f6ef" stroke="#c6a45a" stroke-width="2"/>
+  <rect x="43" y="43" width="1114" height="764" rx="4" fill="none" stroke="#102535" stroke-width="1"/>
+  <path d="M75 110h105M1020 110h105M75 740h105M1020 740h105" stroke="#c6a45a" stroke-width="2"/>
+  <text x="600" y="112" text-anchor="middle" fill="#217e83" font-family="Arial,sans-serif" font-size="16" font-weight="700" letter-spacing="5">ORBITAL ACADEMY · FLIGHT TRAINING</text>
+  <circle cx="600" cy="193" r="44" fill="#102535"/>
+  <circle cx="600" cy="193" r="37" fill="none" stroke="#c6a45a" stroke-width="1.5"/>
+  <path d="M600 164l8 19 20 1-15 13 5 20-18-11-18 11 5-20-15-13 20-1z" fill="#d8bb73"/>
+  <text x="600" y="286" text-anchor="middle" fill="#102535" font-family="Georgia,serif" font-size="43" letter-spacing="3">CERTIFICATE OF ACHIEVEMENT</text>
+  <text x="600" y="329" text-anchor="middle" fill="#687780" font-family="Arial,sans-serif" font-size="15" letter-spacing="4">THIS RECOGNITION IS PRESENTED TO</text>
+  <text x="600" y="403" text-anchor="middle" fill="#217e83" font-family="Georgia,serif" font-size="${nameFontSize}">${escapeXml(active.name)}</text>
+  <path d="M360 426h480" stroke="#c6a45a" stroke-width="1.5"/>
+  <text x="600" y="466" text-anchor="middle" fill="#42515a" font-family="Arial,sans-serif" font-size="18">In recognition of participation in a Junior Astronaut Mission Trainer exercise</text>
+  <text x="600" y="500" text-anchor="middle" fill="#102535" font-family="Georgia,serif" font-size="26">${escapeXml(mission?.name || 'Mission training')}</text>
+  <rect x="330" y="535" width="250" height="82" rx="5" fill="#e9eee9"/>
+  <rect x="620" y="535" width="250" height="82" rx="5" fill="#f0eadb"/>
+  <text x="455" y="566" text-anchor="middle" fill="#687780" font-family="Arial,sans-serif" font-size="12" font-weight="700" letter-spacing="2">MISSION RESULT</text>
+  <text x="455" y="597" text-anchor="middle" fill="#217e83" font-family="Arial,sans-serif" font-size="20" font-weight="700">${escapeXml(latest.status.toUpperCase())}</text>
+  <text x="745" y="566" text-anchor="middle" fill="#687780" font-family="Arial,sans-serif" font-size="12" font-weight="700" letter-spacing="2">TRAINING SCORE</text>
+  <text x="745" y="597" text-anchor="middle" fill="#102535" font-family="Arial,sans-serif" font-size="20" font-weight="700">${escapeXml(latest.score)} POINTS · ${escapeXml(latest.completion)}%</text>
+  <path d="M165 692h240M795 692h240" stroke="#9ba5a5" stroke-width="1"/>
+  <text x="285" y="720" text-anchor="middle" fill="#687780" font-family="Arial,sans-serif" font-size="13">${escapeXml(issuedOn)}</text>
+  <text x="915" y="720" text-anchor="middle" fill="#687780" font-family="Arial,sans-serif" font-size="13">ASTRONAUT ID · ${escapeXml(active.id)}</text>
+  <text x="600" y="776" text-anchor="middle" fill="#217e83" font-family="Arial,sans-serif" font-size="12" font-weight="700" letter-spacing="3">EXPLORE · LEARN · REACH FOR THE STARS</text>
+</svg>`
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(new Blob([certificate], { type: 'image/svg+xml;charset=utf-8' }))
+  link.href = url
+  link.download = `${active.id}-certificate.svg`
+  document.body.append(link)
+  link.click()
+  link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 function NavigationGame({ onComplete, onExit }) {

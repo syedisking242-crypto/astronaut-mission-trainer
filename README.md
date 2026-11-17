@@ -22,7 +22,7 @@ npm run preview
 
 Push the repository to GitHub and import it as a new Vercel project. Vercel detects Vite; use `npm run build` for the build command and `dist` for the output directory. The included `vercel.json` supports app-route fallback. No backend, paid service, or secret is required.
 
-The web edition stores profiles, mission results, health readings, and radio messages in browser `localStorage`. Records stay in the current browser and do not sync across devices; the browser app does not read or migrate the desktop SQLite database. All spacecraft and health values are simulated for training, not connected to physical devices, and not medical advice.
+The web edition stores profiles, mission results, health readings, and radio messages in browser `localStorage`. Use **Log in** to select a saved crew profile and **Log out** to end that local session; this is profile selection, not a password-protected online account. Records stay in the current browser and do not sync across devices; the browser app does not read or migrate the desktop SQLite database. Flight-record certificates download as styled SVG files that can be opened or printed. All spacecraft and health values are simulated for training, not connected to physical devices, and not medical advice.
 
 A local, software-only astronaut training simulator for students. All spacecraft and health values are simulated; no physical devices or live medical measurements are used. Student records stay in a local SQLite database.
 
